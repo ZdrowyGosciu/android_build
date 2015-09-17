@@ -369,8 +369,11 @@ endif
 
 # ---------------------------------------------------------------
 # Generic tools.
-
-LEX := prebuilts/misc/$(BUILD_OS)-$(HOST_PREBUILT_ARCH)/flex/flex-2.5.39
+ifeq ($(USE_HOST_LEX),yes)
+    LEX := flex
+else
+    LEX := prebuilts/misc/$(BUILD_OS)-$(HOST_PREBUILT_ARCH)/flex/flex-2.5.39
+endif
 # The default PKGDATADIR built in the prebuilt bison is a relative path
 # external/bison/data.
 # To run bison from elsewhere you need to set up enviromental variable
@@ -388,6 +391,14 @@ PROTOC := $(HOST_OUT_EXECUTABLES)/aprotoc$(HOST_EXECUTABLE_SUFFIX)
 SIGNAPK_JAR := $(HOST_OUT_JAVA_LIBRARIES)/signapk$(COMMON_JAVA_PACKAGE_SUFFIX)
 MKBOOTFS := $(HOST_OUT_EXECUTABLES)/mkbootfs$(HOST_EXECUTABLE_SUFFIX)
 MINIGZIP := $(HOST_OUT_EXECUTABLES)/minigzip$(HOST_EXECUTABLE_SUFFIX)
+LZ4 := $(HOST_OUT_EXECUTABLES)/lz4$(HOST_EXECUTABLE_SUFFIX)
+ifeq (,$(strip $(BOARD_USE_LZ4_RD_COMPRESSOR)))
+RD_COMPRESSOR := $(MINIGZIP)
+RD_COMPRESSOR_CMD := $(MINIGZIP)
+else
+RD_COMPRESSOR := $(LZ4)
+RD_COMPRESSOR_CMD :=$(LZ4) -l -9
+endif
 ifeq (,$(strip $(BOARD_CUSTOM_MKBOOTIMG)))
 MKBOOTIMG := $(HOST_OUT_EXECUTABLES)/mkbootimg$(HOST_EXECUTABLE_SUFFIX)
 else
@@ -561,6 +572,10 @@ DEX2OAT_TARGET_CPU_VARIANT := $(TARGET_CPU_VARIANT)
 DEX2OAT_TARGET_INSTRUCTION_SET_FEATURES := default
 ifneq (,$(filter $(DEX2OAT_TARGET_CPU_VARIANT),cortex-a7 cortex-a15 krait denver generic cortex-a53))
   DEX2OAT_TARGET_INSTRUCTION_SET_FEATURES := div
+  ifneq (,$(filter $(DEX2OAT_TARGET_CPU_VARIANT),cortex-a53))
+    DEX2OAT_TARGET_INSTRUCTION_SET_FEATURES += needfix_835769
+    DEX2OAT_TARGET_INSTRUCTION_SET_FEATURES := $(subst $(space),$(comma),$(strip $(DEX2OAT_TARGET_INSTRUCTION_SET_FEATURES)))
+  endif
 endif
 
 ifdef TARGET_2ND_ARCH
@@ -569,6 +584,10 @@ $(TARGET_2ND_ARCH_VAR_PREFIX)DEX2OAT_TARGET_CPU_VARIANT := $(TARGET_2ND_CPU_VARI
 $(TARGET_2ND_ARCH_VAR_PREFIX)DEX2OAT_TARGET_INSTRUCTION_SET_FEATURES := default
 ifneq (,$(filter $($(TARGET_2ND_ARCH_VAR_PREFIX)DEX2OAT_TARGET_CPU_VARIANT),cortex-a7 cortex-a15 krait denver cortex-a53))
   $(TARGET_2ND_ARCH_VAR_PREFIX)DEX2OAT_TARGET_INSTRUCTION_SET_FEATURES := div
+  ifneq (,$(filter $($(TARGET_2ND_ARCH_VAR_PREFIX)DEX2OAT_TARGET_CPU_VARIANT),cortex-a53))
+    DEX2OAT_TARGET_INSTRUCTION_SET_FEATURES += needfix_835769
+    DEX2OAT_TARGET_INSTRUCTION_SET_FEATURES := $(subst $(space),$(comma),$(strip $(DEX2OAT_TARGET_INSTRUCTION_SET_FEATURES)))
+  endif
 endif
 endif
 
